@@ -11,29 +11,27 @@
  *  and limitations under the License.
  */
 
-import aws from './aws-client';
-import * as s3 from 'aws-sdk/clients/s3';
+import { GetObjectCommandInput, PutObjectCommandInput, PutObjectCommandOutput, S3 as AWS_S3 } from '@aws-sdk/client-s3';
+import { AwsCredentialIdentity } from '@smithy/types';
 import { throttlingBackOff } from './backoff';
 
 export class S3 {
-  private readonly client: aws.S3;
+  private readonly client: AWS_S3;
 
-  public constructor(credentials?: aws.Credentials) {
-    this.client = new aws.S3({
-      credentials,
-    });
+  public constructor(credentials?: AwsCredentialIdentity) {
+    this.client = new AWS_S3({ credentials, logger: console });
   }
 
-  async getObjectBody(input: s3.GetObjectRequest): Promise<s3.Body> {
-    const object = await throttlingBackOff(() => this.client.getObject(input).promise());
-    return object.Body!;
+  async getObjectBody(input: GetObjectCommandInput): Promise<string> {
+    const object = await throttlingBackOff(() => this.client.getObject(input));
+    return object.Body?.transformToString()!;
   }
 
-  async getObjectBodyAsString(input: s3.GetObjectRequest): Promise<string> {
+  async getObjectBodyAsString(input: GetObjectCommandInput): Promise<string> {
     return this.getObjectBody(input).then(body => body.toString());
   }
 
-  async putObject(input: s3.PutObjectRequest): Promise<s3.PutObjectOutput> {
-    return throttlingBackOff(() => this.client.putObject(input).promise());
+  async putObject(input: PutObjectCommandInput): Promise<PutObjectCommandOutput> {
+    return throttlingBackOff(() => this.client.putObject(input));
   }
 }
